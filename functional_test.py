@@ -1,6 +1,8 @@
 
 from  selenium import webdriver
-import unittest
+import unittest 
+import time
+from selenium.webdriver.common.keys import Keys 
 
 class NewVisitorTest(unittest.TestCase):
     def setUp(self):
@@ -11,8 +13,23 @@ class NewVisitorTest(unittest.TestCase):
     
     def test_can_a_list(self):
         self.browser.get("http://localhost:8000")
-        self.assertIn('nic',self.browser.title)
-        # self.fail("end test")
+        self.assertIn('To do list',self.browser.title)
+        header_text=self.browser.find_element_by_tag_name('h1').text
+        inputbox=self.browser.find_element_by_id('id_new_item')
+        self.assertEqual(
+            inputbox.get_attribute('placeholder'),'Enter a todo item'
+        )
+        inputbox.send_keys('Buy car')
+
+        inputbox.send_keys(Keys.ENTER)
+        time.sleep(1)
+
+        table=self.browser.find_element_by_id('id_list_table')
+        rows=table.find_element_by_tag_name('tr')
+        self.assertTrue(
+            any(row.text == '1: buy a car ' for row in rows)
+        )
+        self.fail("end test")
 
 
 if __name__=='__main__':
