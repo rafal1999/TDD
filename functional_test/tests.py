@@ -1,21 +1,33 @@
 
-from  selenium import webdriver
-from django.test import LiveServerTestCase
+from selenium import webdriver
 from selenium.webdriver.common.keys import Keys 
+from selenium.common.exceptions import WebDriverException
+from django.test import LiveServerTestCase
 import unittest 
 import time
 
+MAX_WAIT=10
 class NewVisitorTest(LiveServerTestCase):
+
     def setUp(self):
         self.browser = webdriver.Firefox()
         self.browser.implicitly_wait(10)
     def tearDown(self):
         self.browser.quit()
     
-    def check_for_row_in_list_table(self,row_text):
-        table = self.browser.find_element_by_id('id_list_table')
-        rows = table.find_elements_by_tag_name('tr')
-        self.assertIn(row_text, [row.text for row in rows])
+    def wait_for_row_in_list_table(self,row_text):
+        start_time=time.time()
+
+        while True:
+            try:
+                table = self.browser.find_element_by_id('id_list_table')
+                rows = table.find_elements_by_tag_name('tr')
+                self.assertIn(row_text, [row.text for row in rows])
+                return
+            except (AssertionError,WebDriverException) as e:
+                if time.time() -start_time > MAX_WAIT:
+                    raise e
+                time.sleep(0.5)
 
     def test_can_a_list(self):
         self.browser.get(self.live_server_url)
@@ -26,19 +38,43 @@ class NewVisitorTest(LiveServerTestCase):
             inputbox.get_attribute('placeholder'),'Enter a todo item')
         inputbox.send_keys('Buy a car') 
         inputbox.send_keys(Keys.ENTER)
-        time.sleep(1)
+        self.wait_for_row_in_list_table('1: Buy a car')
         inputbox=self.browser.find_element_by_id('id_new_item') 
         inputbox.send_keys('Buy a pen') 
         inputbox.send_keys(Keys.ENTER)
+        self.wait_for_row_in_list_table('2: Buy a pen')
 
-        time.sleep(1)
         table=self.browser.find_element_by_id('id_list_table')
         rows=table.find_elements_by_tag_name('tr')
-        self.check_for_row_in_list_table('1: Buy a car')
-        self.check_for_row_in_list_table('2: Buy a pen')
+        self.wait_for_row_in_list_table('1: Buy a car')
+        self.wait_for_row_in_list_table('2: Buy a pen')
         self.fail("END TEST")
+    def test_multiple_users_can_start_list_at_diffrent_urls(self):
+        self.browser.get(self.live_server_url)
+        inputbox = self.browser.find_element_by_id('id_new_item')
+        inputbox.send_keys('Buy a peacock feathers')
+        inputbox.send_keys(Keys.ENTER)
+        self.wait_for_row_in_list_table('1: Buy a peacock feathers')
+        edith_list_url = self.browser.current_url
+        self.assertRegex(edith_list_url, '/lists/.+')
+        self.browser.quit()
+        self.browser=webdriver.Firefox()
+        self.browser.get(self.live_server_url)
+        page_text = self.browser.find_element_by_tag_name('body').text
+        self.assertNotIn('Buy a peacock feathers', page_text)
+        self.assertNotIn('Make a fly',page_text)
+        inputbox = self.browser.find_element_by_id('id_new_item')
+        inputbox.send_keys('Buy milk')
+        inputbox.send_keys(Keys.ENTER)
+        self.wait_for_row_in_list_table('1: Buy milk')
 
+        francis_list_url = self.browser.current_url
+        self.assertRegex(francis_list_url, '/list/.+')
+        self.assertNotEqual(francis_list_url,edith_list_url)
 
+        page_text=self.broworse.find_element_by_tag_name('body').text
+        self.assertNotIn('Buy a car',page_text)
+        self.assertIn('Buy milk',page_text)
 # if __name__=='__main__':
     # unittest.main(warnings='ignore')
 
