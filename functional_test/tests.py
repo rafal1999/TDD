@@ -49,6 +49,7 @@ class NewVisitorTest(LiveServerTestCase):
         self.wait_for_row_in_list_table('1: Buy a car')
         self.wait_for_row_in_list_table('2: Buy a pen')
         self.fail("END TEST")
+
     def test_multiple_users_can_start_list_at_diffrent_urls(self):
         self.browser.get(self.live_server_url)
         inputbox = self.browser.find_element_by_id('id_new_item')
@@ -69,10 +70,10 @@ class NewVisitorTest(LiveServerTestCase):
         self.wait_for_row_in_list_table('1: Buy milk')
 
         francis_list_url = self.browser.current_url
-        self.assertRegex(francis_list_url, '/list/.+')
+        self.assertRegex(francis_list_url, '/lists/.+')
         self.assertNotEqual(francis_list_url,edith_list_url)
 
-        page_text=self.broworse.find_element_by_tag_name('body').text
+        page_text=self.browser.find_element_by_tag_name('body').text
         self.assertNotIn('Buy a car',page_text)
         self.assertIn('Buy milk',page_text)
 # if __name__=='__main__':
